@@ -1,0 +1,283 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import CraftInputForm from './components/CraftInputForm.jsx'
+import CraftResultPanel from './components/CraftResultPanel.jsx'
+import ItemInfoCard from './components/ItemInfoCard.jsx'
+import {
+  findItemById,
+  getCategoryById,
+  getCraftCatalog,
+  loadCraftCatalog,
+} from './data/loadCraftCatalog.js'
+import {
+  calculateCraftNeeded,
+  parseNonNegativeInt,
+} from './utils/calculate.js'
+
+const STORAGE_KEY = 'atlantica-craft-calculator-v1'
+
+function emptyForm() {
+  return {
+    categoryId: '',
+    itemId: '',
+    itemSearch: '',
+    currentLevel: '1',
+    currentExp: '0',
+    targetLevel: '10',
+  }
+}
+
+function loadSavedState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
+function resolveFormWithCatalog(saved, catalog) {
+  const first = catalog.categories[0]
+  const categoryId =
+    catalog.categories.find((c) => c.id === saved?.categoryId)?.id ?? first?.id ?? ''
+  const category = getCategoryById(categoryId, catalog)
+  const itemId =
+    category?.items.find((i) => i.id === saved?.itemId)?.id ?? category?.items[0]?.id ?? ''
+
+  return {
+    ...emptyForm(),
+    ...saved,
+    categoryId,
+    itemId,
+    itemSearch: saved?.itemSearch ?? '',
+  }
+}
+
+export default function App() {
+  const [catalog, setCatalog] = useState(null)
+  const [catalogError, setCatalogError] = useState(null)
+  const [catalogLoading, setCatalogLoading] = useState(true)
+  const [form, setForm] = useState(emptyForm)
+  const [saveMessage, setSaveMessage] = useState('')
+
+  const fetchCatalog = useCallback(async (forceRefresh = false) => {
+    if (forceRefresh || !getCraftCatalog()) {
+      setCatalogLoading(true)
+    }
+    setCatalogError(null)
+    try {
+      const data = await loadCraftCatalog({ forceRefresh })
+      setCatalog(data)
+      setForm((prev) => {
+        const saved = prev.categoryId ? prev : loadSavedState()
+        return resolveFormWithCatalog(saved ?? prev, data)
+      })
+    } catch (err) {
+      setCatalogError(err instanceof Error ? err.message : 'โหลดข้อมูลไม่สำเร็จ')
+    } finally {
+      setCatalogLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchCatalog(false)
+  }, [fetchCatalog])
+
+  const category = useMemo(
+    () => (catalog ? getCategoryById(form.categoryId, catalog) : null),
+    [catalog, form.categoryId],
+  )
+
+  const selectedItem = useMemo(
+    () => (catalog ? findItemById(form.categoryId, form.itemId, catalog) : null),
+    [catalog, form.categoryId, form.itemId],
+  )
+
+  useEffect(() => {
+    if (!category?.items?.length) return
+    const exists = category.items.some((i) => i.id === form.itemId)
+    if (!exists) {
+      setForm((prev) => ({ ...prev, itemId: category.items[0].id }))
+    }
+  }, [category, form.itemId])
+
+  const { result, error } = useMemo(() => {
+    if (!selectedItem) return { result: null, error: null }
+
+    const levelCheck = parseNonNegativeInt(form.currentLevel, 'เลเวลสกิลปัจจุบัน')
+    if (!levelCheck.ok) return { result: null, error: levelCheck.message }
+
+    const expCheck = parseNonNegativeInt(form.currentExp, 'EXP คราฟปัจจุบัน')
+    if (!expCheck.ok) return { result: null, error: expCheck.message }
+
+    const targetCheck = parseNonNegativeInt(form.targetLevel, 'เลเวลเป้าหมาย')
+    if (!targetCheck.ok) return { result: null, error: targetCheck.message }
+
+    const calc = calculateCraftNeeded({
+      currentLevel: levelCheck.value,
+      currentExp: expCheck.value,
+      targetLevel: targetCheck.value,
+      expPerCraft: selectedItem.expPerCraft ?? 0,
+    })
+
+    if (!calc.ok) return { result: null, error: calc.message }
+    return { result: calc, error: null }
+  }, [form, selectedItem])
+
+  const handleCategoryChange = useCallback(
+    (categoryId) => {
+      if (!catalog) return
+      const cat = getCategoryById(categoryId, catalog)
+      setForm((prev) => ({
+        ...prev,
+        categoryId,
+        itemId: cat?.items[0]?.id ?? prev.itemId,
+        itemSearch: '',
+      }))
+      setSaveMessage('')
+    },
+    [catalog],
+  )
+
+  const handleReset = useCallback(() => {
+    if (catalog) {
+      setForm(resolveFormWithCatalog(null, catalog))
+    } else {
+      setForm(emptyForm())
+    }
+    setSaveMessage('')
+    try {
+      localStorage.removeItem(STORAGE_KEY)
+    } catch {
+      /* ignore */
+    }
+  }, [catalog])
+
+  const handleSave = useCallback(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(form))
+      setSaveMessage('บันทึกแล้ว — เปิดหน้าใหม่จะโหลดค่าล่าสุดอัตโนมัติ')
+      setTimeout(() => setSaveMessage(''), 4000)
+    } catch {
+      setSaveMessage('ไม่สามารถบันทึกได้ (LocalStorage ถูกปิดหรือเต็ม)')
+    }
+  }, [form])
+
+  return (
+    <div className="min-h-screen bg-mesh">
+      <header className="border-b border-white/5 bg-surface/80 backdrop-blur-md sticky top-0 z-10">
+        <div className="mx-auto max-w-6xl px-4 py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <p className="text-xs uppercase tracking-[0.35em] text-neon/70 font-display">
+              Atlantica Online
+            </p>
+            <h1 className="font-display text-xl sm:text-2xl font-bold text-gold glow-gold">
+              Craft EXP Calculator
+            </h1>
+          </div>
+          <p className="text-xs text-zinc-500 max-w-sm sm:text-right">
+            ข้อมูลคราฟจาก{' '}
+            <a
+              href="https://craftcalculator.jana4u.net/"
+              target="_blank"
+              rel="noreferrer"
+              className="text-neon/80 hover:text-neon underline-offset-2 hover:underline"
+            >
+              craftcalculator.jana4u.net
+            </a>
+            {' · '}
+            <a
+              href="https://craftcalculator.jana4u.net/experience-table"
+              target="_blank"
+              rel="noreferrer"
+              className="text-neon/80 hover:text-neon underline-offset-2 hover:underline"
+            >
+              ตาราง EXP
+            </a>
+          </p>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
+        {catalogLoading && (
+          <div className="panel mb-6 text-center py-10">
+            <p className="text-neon font-display animate-pulse">กำลังโหลดข้อมูลคราฟ...</p>
+            <p className="text-sm text-zinc-500 mt-2">ดึงจาก GitHub (jana4u) · ครั้งแรกอาจใช้เวลาสักครู่</p>
+          </div>
+        )}
+
+        {catalogError && (
+          <div className="alert-error mb-6" role="alert">
+            <p>{catalogError}</p>
+            <button type="button" className="btn btn-secondary mt-3" onClick={() => fetchCatalog(true)}>
+              ลองใหม่
+            </button>
+          </div>
+        )}
+
+        {catalog && !catalogLoading && (
+          <div className="grid gap-6 lg:grid-cols-5">
+            <div className="lg:col-span-3 space-y-6">
+              <CraftInputForm
+                categories={catalog.categories}
+                categoryId={form.categoryId}
+                itemId={form.itemId}
+                itemSearch={form.itemSearch}
+                currentLevel={form.currentLevel}
+                currentExp={form.currentExp}
+                targetLevel={form.targetLevel}
+                onCategoryChange={handleCategoryChange}
+                onItemChange={(itemId) => {
+                  setForm((p) => ({ ...p, itemId }))
+                  setSaveMessage('')
+                }}
+                onItemSearchChange={(itemSearch) => {
+                  setForm((p) => ({ ...p, itemSearch }))
+                }}
+                onCurrentLevelChange={(v) => {
+                  setForm((p) => ({ ...p, currentLevel: v }))
+                  setSaveMessage('')
+                }}
+                onCurrentExpChange={(v) => {
+                  setForm((p) => ({ ...p, currentExp: v }))
+                  setSaveMessage('')
+                }}
+                onTargetLevelChange={(v) => {
+                  setForm((p) => ({ ...p, targetLevel: v }))
+                  setSaveMessage('')
+                }}
+              />
+              <ItemInfoCard item={selectedItem} />
+            </div>
+
+            <div className="lg:col-span-2">
+              <CraftResultPanel
+                result={result ? { ok: true, ...result } : null}
+                error={error}
+                selectedItem={selectedItem}
+                onReset={handleReset}
+                onSave={handleSave}
+                onRefreshData={() => fetchCatalog(true)}
+                saveMessage={saveMessage}
+                catalogInfo={catalog}
+              />
+            </div>
+          </div>
+        )}
+      </main>
+
+      <footer className="text-center text-xs text-zinc-600 pb-8 px-4">
+        ข้อมูลเกมจากโปรเจกต{' '}
+        <a
+          href="https://github.com/jana4u/atlantica_online_craft_calculator"
+          target="_blank"
+          rel="noreferrer"
+          className="text-zinc-500 hover:text-neon"
+        >
+          atlantica_online_craft_calculator
+        </a>{' '}
+        (MIT) · EXP = floor(workload ÷ 50) ÷ batch_size
+      </footer>
+    </div>
+  )
+}
