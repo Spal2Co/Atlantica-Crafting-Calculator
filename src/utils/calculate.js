@@ -36,7 +36,7 @@ export function calculateCraftNeeded({
   currentLevel,
   currentExp,
   targetLevel,
-  expPerBatch,
+  expPerCraft,
   batchSize = 1,
 }) {
   if (currentLevel < 1 || currentLevel > MAX_SKILL_LEVEL) {
@@ -63,7 +63,7 @@ export function calculateCraftNeeded({
           : 'เลเวลปัจจุบันสูงกว่าเป้าหมาย — ลองตั้งเป้าหมายให้สูงขึ้น',
     }
   }
-  if (!expPerBatch || expPerBatch <= 0) {
+  if (!expPerCraft || expPerCraft <= 0) {
     return {
       ok: false,
       code: ERROR_CODES.NO_EXP_PER_CRAFT,
@@ -84,11 +84,11 @@ export function calculateCraftNeeded({
   }
 
   const safeBatch = Math.max(1, batchSize)
-  /** จำนวนครั้งที่กดปุ่มคราฟ (1 ครั้ง = 1 batch ในเกม) */
-  const craftActionsNeeded = Math.ceil(expNeeded / expPerBatch)
-  /** จำนวนชิ้นไอเทมที่ได้รวม (ครั้ง × ชิ้นต่อครั้ง) */
-  const itemsProduced = craftActionsNeeded * safeBatch
-  const expGainedTotal = craftActionsNeeded * expPerBatch
+  /** จำนวนคราฟที่ต้องทำตามสูตรก่อนหน้า */
+  const craftActionsNeeded = Math.ceil(expNeeded / expPerCraft)
+  const itemsProduced = craftActionsNeeded
+  const expPerBatch = expPerCraft * safeBatch
+  const expGainedTotal = craftActionsNeeded * expPerCraft
 
   return {
     ok: true,
@@ -98,7 +98,7 @@ export function calculateCraftNeeded({
     expGainedTotal,
     batchSize: safeBatch,
     expPerBatch,
-    expPerItem: expPerBatch / safeBatch,
+    expPerItem: expPerCraft,
     currentTotal,
     targetTotal,
   }

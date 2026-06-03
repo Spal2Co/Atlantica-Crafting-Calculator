@@ -117,8 +117,7 @@ export default function App() {
       currentLevel: levelCheck.value,
       currentExp: expCheck.value,
       targetLevel: targetCheck.value,
-      expPerBatch: selectedItem.expPerBatch ?? 0,
-      batchSize: selectedItem.batchSize ?? 1,
+      expPerCraft: selectedItem.expPerCraft ?? 0,
     })
 
     if (!calc.ok) return { result: null, error: calc.message }
