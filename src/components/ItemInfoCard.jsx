@@ -21,14 +21,20 @@ export default function ItemInfoCard({ item }) {
           <dd className="text-gold font-semibold">Lv. {item.requiredSkillLv}</dd>
         </div>
         <div className="flex justify-between gap-4">
-          <dt className="text-zinc-500">EXP / ครั้ง</dt>
-          <dd className="text-neon font-semibold">+{formatExpPerCraft(item.expPerCraft)}</dd>
+          <dt className="text-zinc-500">EXP / ครั้งกดคราฟ</dt>
+          <dd className="text-neon font-semibold">+{formatNumber(item.expPerBatch ?? 0)}</dd>
         </div>
         {item.batchSize > 1 && (
-          <div className="flex justify-between gap-4">
-            <dt className="text-zinc-500">คราฟต่อแบทช์</dt>
-            <dd className="text-zinc-300">{item.batchSize} ชิ้น (workload {formatNumber(item.workload)})</dd>
-          </div>
+          <>
+            <div className="flex justify-between gap-4">
+              <dt className="text-zinc-500">ได้ต่อครั้งกดคราฟ</dt>
+              <dd className="text-gold font-semibold">{item.batchSize} ชิ้น</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-zinc-500">EXP / ชิ้น</dt>
+              <dd className="text-zinc-300">+{formatExpPerCraft(item.expPerCraft)}</dd>
+            </div>
+          </>
         )}
         <div className="flex justify-between gap-4">
           <dt className="text-zinc-500">EXP สะสมถึงเลเวลถัดไป</dt>

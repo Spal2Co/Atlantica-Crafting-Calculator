@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { formatExpPerCraft } from '../data/craftXp.js'
+import { formatNumber } from '../utils/calculate.js'
 
 const MAX_DROPDOWN_ITEMS = 300
 
@@ -116,7 +116,8 @@ export default function CraftInputForm({
           >
             {dropdownItems.map((it) => (
               <option key={it.id} value={it.id}>
-                {it.name} (Lv.{it.requiredSkillLv} · +{formatExpPerCraft(it.expPerCraft)} EXP)
+                {it.name} (Lv.{it.requiredSkillLv} · +{formatNumber(it.expPerBatch ?? 0)} EXP/ครั้ง
+                {it.batchSize > 1 ? ` · ${it.batchSize} ชิ้น` : ''})
               </option>
             ))}
           </select>

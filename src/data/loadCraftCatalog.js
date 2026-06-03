@@ -1,6 +1,6 @@
 import { getCumulativeExp } from './expTable.js'
 import { parseItemsYaml } from './parseItemsYaml.js'
-import { expFromWorkload } from './craftXp.js'
+import { expPerBatchFromWorkload, expPerItemFromWorkload } from './craftXp.js'
 
 export const ITEMS_YAML_URL =
   'https://raw.githubusercontent.com/jana4u/atlantica_online_craft_calculator/master/data/items.yml'
@@ -66,11 +66,14 @@ function buildItem(name, data) {
   const requiredSkillLv = data.skill_lvl ?? 0
   const nextLevel = Math.min(requiredSkillLv + 1, 180)
 
+  const expPerBatch = expPerBatchFromWorkload(data.workload)
+
   return {
     id: makeItemId(data.skill, name),
     name,
     requiredSkillLv,
-    expPerCraft: expFromWorkload(data.workload, batchSize),
+    expPerBatch,
+    expPerCraft: expPerItemFromWorkload(data.workload, batchSize),
     workload: data.workload,
     batchSize,
     ingredients: data.ingredients ?? {},

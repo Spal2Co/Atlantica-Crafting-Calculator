@@ -24,9 +24,21 @@ export function parseNonNegativeInt(value, fieldLabel) {
 }
 
 /**
- * @param {{ currentLevel: number, currentExp: number, targetLevel: number, expPerCraft: number }} params
+ * @param {{
+ *   currentLevel: number,
+ *   currentExp: number,
+ *   targetLevel: number,
+ *   expPerBatch: number,
+ *   batchSize?: number,
+ * }} params
  */
-export function calculateCraftNeeded({ currentLevel, currentExp, targetLevel, expPerCraft }) {
+export function calculateCraftNeeded({
+  currentLevel,
+  currentExp,
+  targetLevel,
+  expPerBatch,
+  batchSize = 1,
+}) {
   if (currentLevel < 1 || currentLevel > MAX_SKILL_LEVEL) {
     return {
       ok: false,
@@ -51,11 +63,11 @@ export function calculateCraftNeeded({ currentLevel, currentExp, targetLevel, ex
           : 'เลเวลปัจจุบันสูงกว่าเป้าหมาย — ลองตั้งเป้าหมายให้สูงขึ้น',
     }
   }
-  if (!expPerCraft || expPerCraft <= 0) {
+  if (!expPerBatch || expPerBatch <= 0) {
     return {
       ok: false,
       code: ERROR_CODES.NO_EXP_PER_CRAFT,
-      message: 'ไอเทมที่เลือกไม่มีค่า EXP ต่อครั้ง',
+      message: 'ไอเทมที่เลือกไม่มีค่า EXP ต่อครั้งกดคราฟ',
     }
   }
 
@@ -71,12 +83,22 @@ export function calculateCraftNeeded({ currentLevel, currentExp, targetLevel, ex
     }
   }
 
-  const craftsNeeded = Math.ceil(expNeeded / expPerCraft)
+  const safeBatch = Math.max(1, batchSize)
+  /** จำนวนครั้งที่กดปุ่มคราฟ (1 ครั้ง = 1 batch ในเกม) */
+  const craftActionsNeeded = Math.ceil(expNeeded / expPerBatch)
+  /** จำนวนชิ้นไอเทมที่ได้รวม (ครั้ง × ชิ้นต่อครั้ง) */
+  const itemsProduced = craftActionsNeeded * safeBatch
+  const expGainedTotal = craftActionsNeeded * expPerBatch
 
   return {
     ok: true,
     expNeeded,
-    craftsNeeded,
+    craftActionsNeeded,
+    itemsProduced,
+    expGainedTotal,
+    batchSize: safeBatch,
+    expPerBatch,
+    expPerItem: expPerBatch / safeBatch,
     currentTotal,
     targetTotal,
   }
