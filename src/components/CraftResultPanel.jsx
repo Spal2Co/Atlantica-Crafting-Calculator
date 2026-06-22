@@ -41,12 +41,13 @@ export default function CraftResultPanel({
 
       {result?.ok && (
         <>
+          {/*}
           <div className="result-hero">
             <p className="result-hero-label">ต้องกดคราฟ (รอบ)</p>
             <p className="result-hero-value">{formatNumber(result.craftActionsNeeded)}</p>
             <p className="result-hero-unit">ครั้ง</p>
           </div>
-
+          
           {batchSize > 1 && (
             <p className="text-center text-sm text-zinc-400 -mt-2">
               ได้ไอเทมรวมประมาณ{' '}
@@ -55,6 +56,25 @@ export default function CraftResultPanel({
               ({formatNumber(result.craftActionsNeeded)} × {batchSize} ชิ้น/ครั้ง)
             </p>
           )}
+          */}
+
+          <div className="result-hero">
+            <p className="result-hero-label">ต้องกดคราฟ</p>
+            <p className="result-hero-value">{formatNumber(result.itemsProduced)}</p>
+            <p className="result-hero-unit">ชิ้น</p>
+          </div>
+          
+          {/*
+          {batchSize > 1 && (
+            <p className="text-center text-sm text-zinc-400 -mt-2">
+              ได้ไอเทมรวมประมาณ{' '}
+              <strong className="text-gold">{formatNumber(result.itemsProduced)} ชิ้น</strong>
+              {' '}
+              ({formatNumber(result.craftActionsNeeded)} × {batchSize} ชิ้น/ครั้ง)
+            </p>
+          )}
+            */}
+
 
           <ul className="summary-list">
             <li>
