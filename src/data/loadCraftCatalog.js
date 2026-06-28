@@ -5,8 +5,11 @@ import { expPerBatchFromWorkload, expPerItemFromWorkload } from './craftXp.js'
 export const ITEMS_YAML_URL =
   // Primary public-facing source site (uses the jana4u dataset)
   'https://craftcalculator.jana4u.net/data/items.yml'
+export const LOCAL_ITEMS_YAML_URL = './data/items.yml'
+export const GITHUB_ITEMS_YAML_URL =
+  'https://raw.githubusercontent.com/jana4u/atlantica_online_craft_calculator/master/data/items.yml'
 
-const CACHE_KEY = 'atlantica-craft-catalog-cache-v1'
+const CACHE_KEY = 'atlantica-craft-catalog-cache-v2'
 
 export function slugify(value) {
   return String(value)
@@ -160,6 +163,30 @@ function writeLocalCache(catalog) {
   }
 }
 
+async function fetchItemsYaml() {
+  const urls = [LOCAL_ITEMS_YAML_URL, ITEMS_YAML_URL, GITHUB_ITEMS_YAML_URL]
+  let lastError = null
+
+  for (const url of urls) {
+    try {
+      const response = await fetch(url)
+      if (!response.ok) {
+        lastError = new Error(`HTTP ${response.status} จาก ${url}`)
+        continue
+      }
+      return response.text()
+    } catch (err) {
+      lastError = err
+    }
+  }
+
+  throw new Error(
+    lastError instanceof Error
+      ? `โหลดข้อมูลไม่สำเร็จ (${lastError.message})`
+      : 'โหลดข้อมูลไม่สำเร็จ',
+  )
+}
+
 export async function loadCraftCatalog({ preferCache = true, forceRefresh = false } = {}) {
   if (catalogCache && !forceRefresh) return catalogCache
   if (catalogPromise && !forceRefresh) return catalogPromise
@@ -173,12 +200,7 @@ export async function loadCraftCatalog({ preferCache = true, forceRefresh = fals
       }
     }
 
-    const response = await fetch(ITEMS_YAML_URL)
-    if (!response.ok) {
-      throw new Error(`โหลดข้อมูลไม่สำเร็จ (HTTP ${response.status})`)
-    }
-
-    const yamlText = await response.text()
+    const yamlText = await fetchItemsYaml()
     const itemsMap = parseItemsYaml(yamlText)
     const catalog = transformItemsMap(itemsMap)
 

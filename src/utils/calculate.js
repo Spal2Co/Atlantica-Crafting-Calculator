@@ -28,7 +28,7 @@ export function parseNonNegativeInt(value, fieldLabel) {
  *   currentLevel: number,
  *   currentExp: number,
  *   targetLevel: number,
- *   expPerBatch: number,
+ *   expPerCraft: number,
  *   batchSize?: number,
  * }} params
  */
@@ -71,8 +71,7 @@ export function calculateCraftNeeded({
     }
   }
 
-  /**const currentTotal = getCumulativeExp(currentLevel) + currentExp สูตรเดิม**/
-  const currentTotal = currentExp > 0 ? currentExp : getCumulativeExp(currentLevel)
+  const currentTotal = getCumulativeExp(currentLevel) + currentExp
   const targetTotal = getCumulativeExp(targetLevel)
   const expNeeded = targetTotal - currentTotal
 
@@ -85,12 +84,10 @@ export function calculateCraftNeeded({
   }
 
   const safeBatch = Math.max(1, batchSize)
-  /** จำนวนคราฟที่ต้องทำตามสูตรก่อนหน้า */
-  const craftActionsNeeded = Math.ceil(expNeeded / expPerCraft)
-  /** const itemsProduced = craftActionsNeeded สูตรเดิม*/
-  const itemsProduced = craftActionsNeeded * safeBatch
   const expPerBatch = expPerCraft * safeBatch
-  const expGainedTotal = craftActionsNeeded * expPerCraft
+  const craftActionsNeeded = Math.ceil(expNeeded / expPerBatch)
+  const itemsProduced = craftActionsNeeded * safeBatch
+  const expGainedTotal = craftActionsNeeded * expPerBatch
 
   return {
     ok: true,
@@ -104,6 +101,40 @@ export function calculateCraftNeeded({
     currentTotal,
     targetTotal,
   }
+}
+
+export function calculateCraftQuantityPlan(quantity, batchSize = 1) {
+  const requestedQuantity = Number(quantity)
+  const safeBatch = Math.max(1, Number(batchSize) || 1)
+
+  if (
+    !Number.isFinite(requestedQuantity) ||
+    !Number.isInteger(requestedQuantity) ||
+    requestedQuantity < 1
+  ) {
+    return null
+  }
+
+  const craftActionsNeeded = Math.ceil(requestedQuantity / safeBatch)
+
+  return {
+    requestedQuantity,
+    craftActionsNeeded,
+    itemsProduced: craftActionsNeeded * safeBatch,
+    batchSize: safeBatch,
+  }
+}
+
+export function calculateIngredientRequirements(ingredients, craftActions = 1) {
+  const actions = Math.max(1, Number(craftActions) || 1)
+
+  return Object.entries(ingredients ?? {})
+    .filter(([, qty]) => Number.isFinite(Number(qty)))
+    .map(([name, qty]) => ({
+      name,
+      qtyPerCraft: Number(qty),
+      totalQty: Number(qty) * actions,
+    }))
 }
 
 export function formatNumber(n) {

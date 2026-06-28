@@ -8,9 +8,9 @@ import {
   getCraftCatalog,
   loadCraftCatalog,
 } from './data/loadCraftCatalog.js'
-import { getCumulativeExp } from './data/expTable.js'
 import {
   calculateCraftNeeded,
+  calculateCraftQuantityPlan,
   parseNonNegativeInt,
 } from './utils/calculate.js'
 
@@ -24,6 +24,7 @@ function emptyForm() {
     currentLevel: '1',
     currentExp: '0',
     targetLevel: '10',
+    craftQuantity: '1',
   }
 }
 
@@ -108,17 +109,7 @@ export default function App() {
     const levelCheck = parseNonNegativeInt(form.currentLevel, 'เลเวลสกิลปัจจุบัน')
     if (!levelCheck.ok) return { result: null, error: levelCheck.message }
 
-    // Accept either "EXP within level" (recommended) or a cumulative total.
-    // If the user entered a number >= cumulative exp for the current level,
-    // treat it as a cumulative total and convert to within-level exp.
-    const rawExp = Number(form.currentExp)
-    let expCheck
-    if (Number.isFinite(rawExp) && rawExp >= getCumulativeExp(levelCheck.value)) {
-      const within = rawExp - getCumulativeExp(levelCheck.value)
-      expCheck = { ok: true, value: within }
-    } else {
-      expCheck = parseNonNegativeInt(form.currentExp, 'EXP คราฟปัจจุบัน')
-    }
+    const expCheck = parseNonNegativeInt(form.currentExp, 'EXP คราฟปัจจุบัน')
     if (!expCheck.ok) return { result: null, error: expCheck.message }
 
     const targetCheck = parseNonNegativeInt(form.targetLevel, 'เลเวลเป้าหมาย')
@@ -129,11 +120,17 @@ export default function App() {
       currentExp: expCheck.value,
       targetLevel: targetCheck.value,
       expPerCraft: selectedItem.expPerCraft ?? 0,
+      batchSize: selectedItem.batchSize ?? 1,
     })
 
     if (!calc.ok) return { result: null, error: calc.message }
     return { result: calc, error: null }
   }, [form, selectedItem])
+
+  const craftQuantityPlan = useMemo(
+    () => calculateCraftQuantityPlan(form.craftQuantity, selectedItem?.batchSize ?? 1),
+    [form.craftQuantity, selectedItem],
+  )
 
   const handleCategoryChange = useCallback(
     (categoryId) => {
@@ -217,6 +214,20 @@ export default function App() {
           </div>
         )}
 
+        {catalogError && !catalogLoading && (
+          <div className="panel mb-6">
+            <div className="alert-error" role="alert">
+              <span className="text-lg" aria-hidden>
+                ⚠
+              </span>
+              <div>
+                <p className="font-semibold">โหลดข้อมูลคราฟไม่ได้</p>
+                <p>{catalogError}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {catalog && !catalogLoading && (
           <div className="grid gap-6 lg:grid-cols-5">
             <div className="lg:col-span-3 space-y-6">
@@ -228,6 +239,7 @@ export default function App() {
                 currentLevel={form.currentLevel}
                 currentExp={form.currentExp}
                 targetLevel={form.targetLevel}
+                craftQuantity={form.craftQuantity}
                 onCategoryChange={handleCategoryChange}
                 onItemChange={(itemId) => {
                   setForm((p) => ({ ...p, itemId }))
@@ -248,8 +260,17 @@ export default function App() {
                   setForm((p) => ({ ...p, targetLevel: v }))
                   setSaveMessage('')
                 }}
+                onCraftQuantityChange={(v) => {
+                  setForm((p) => ({ ...p, craftQuantity: v }))
+                  setSaveMessage('')
+                }}
               />
-              <ItemInfoCard item={selectedItem} />
+              <ItemInfoCard
+                item={selectedItem}
+                craftQuantity={form.craftQuantity}
+                craftActionsNeeded={craftQuantityPlan?.craftActionsNeeded ?? 1}
+                itemsProduced={craftQuantityPlan?.itemsProduced ?? selectedItem?.batchSize ?? 1}
+              />
             </div>
 
             <div className="lg:col-span-2">

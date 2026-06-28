@@ -11,12 +11,14 @@ export default function CraftInputForm({
   currentLevel,
   currentExp,
   targetLevel,
+  craftQuantity,
   onCategoryChange,
   onItemChange,
   onItemSearchChange,
   onCurrentLevelChange,
   onCurrentExpChange,
   onTargetLevelChange,
+  onCraftQuantityChange,
 }) {
   const [localSearch, setLocalSearch] = useState(itemSearch ?? '')
 
@@ -158,6 +160,18 @@ export default function CraftInputForm({
             value={targetLevel}
             onChange={(e) => onTargetLevelChange(e.target.value)}
             placeholder="เช่น 30"
+          />
+        </label>
+
+        <label className="field sm:col-span-2">
+          <span className="field-label">จำนวนไอเทมที่ต้องการคราฟ</span>
+          <input
+            type="number"
+            min={1}
+            className="input"
+            value={craftQuantity}
+            onChange={(e) => onCraftQuantityChange(e.target.value)}
+            placeholder="เช่น 500"
           />
         </label>
       </div>

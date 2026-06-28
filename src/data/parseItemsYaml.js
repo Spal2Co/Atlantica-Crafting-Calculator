@@ -26,7 +26,7 @@ export function parseItemsYaml(text) {
     }
 
     if (inIngredients) {
-      const ing = line.match(/^ +"(?:([^"\\]|\\.)*)":\s*(\d+)\s*$/)
+      const ing = line.match(/^ +"((?:[^"\\]|\\.)*)":\s*(\d+)\s*$/)
       if (ing) {
         current.ingredients[ing[1]] = Number(ing[2])
         continue

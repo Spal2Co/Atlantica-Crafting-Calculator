@@ -1,10 +1,17 @@
 import { formatExpPerCraft } from '../data/craftXp.js'
-import { formatNumber } from '../utils/calculate.js'
+import { calculateIngredientRequirements, formatNumber } from '../utils/calculate.js'
 
-export default function ItemInfoCard({ item }) {
+export default function ItemInfoCard({
+  item,
+  craftQuantity = '1',
+  craftActionsNeeded = 1,
+  itemsProduced = 1,
+}) {
   if (!item) return null
 
-  const ingredientEntries = Object.entries(item.ingredients ?? {})
+  const ingredientEntries = calculateIngredientRequirements(item.ingredients, craftActionsNeeded)
+  const requestedQuantity = Number(craftQuantity)
+  const hasCraftPlan = Number.isInteger(requestedQuantity) && requestedQuantity > 0
 
   return (
     <aside className="panel border border-neon/20">
@@ -45,13 +52,22 @@ export default function ItemInfoCard({ item }) {
       {ingredientEntries.length > 0 && (
         <div>
           <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">
-            วัตถุดิบ (ต่อ 1 ครั้งคราฟ)
+            วัตถุดิบ
           </h4>
+          {hasCraftPlan && (
+            <p className="mb-2 text-xs text-zinc-500 leading-relaxed">
+              ต้องการ {formatNumber(requestedQuantity)} ชิ้น · คราฟ {formatNumber(craftActionsNeeded)} รอบ
+              {item.batchSize > 1 && ` · ได้จริง ${formatNumber(itemsProduced)} ชิ้น`}
+            </p>
+          )}
           <ul className="max-h-48 overflow-y-auto rounded-lg border border-white/5 bg-[#0f0f16] text-xs divide-y divide-white/5">
-            {ingredientEntries.map(([name, qty]) => (
+            {ingredientEntries.map(({ name, qtyPerCraft, totalQty }) => (
               <li key={name} className="flex justify-between gap-3 px-3 py-2">
                 <span className="text-zinc-300">{name}</span>
-                <span className="text-gold font-medium shrink-0">×{formatNumber(qty)}</span>
+                <span className="text-right shrink-0">
+                  <span className="block text-zinc-500">ต่อรอบ ×{formatNumber(qtyPerCraft)}</span>
+                  <span className="block text-gold font-medium">รวม ×{formatNumber(totalQty)}</span>
+                </span>
               </li>
             ))}
           </ul>
