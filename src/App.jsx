@@ -15,6 +15,13 @@ import {
 } from './utils/calculate.js'
 
 const STORAGE_KEY = 'atlantica-craft-calculator-v1'
+const THEME_STORAGE_KEY = 'atlantica-craft-theme-v1'
+
+const THEMES = [
+  { id: 'night', label: 'Night' },
+  { id: 'dawn', label: 'Dawn' },
+  { id: 'forest', label: 'Forest' },
+]
 
 function emptyForm() {
   return {
@@ -35,6 +42,15 @@ function loadSavedState() {
     return JSON.parse(raw)
   } catch {
     return null
+  }
+}
+
+function loadSavedTheme() {
+  try {
+    const raw = localStorage.getItem(THEME_STORAGE_KEY)
+    return THEMES.some((theme) => theme.id === raw) ? raw : THEMES[0].id
+  } catch {
+    return THEMES[0].id
   }
 }
 
@@ -61,6 +77,7 @@ export default function App() {
   const [catalogLoading, setCatalogLoading] = useState(true)
   const [form, setForm] = useState(emptyForm)
   const [saveMessage, setSaveMessage] = useState('')
+  const [theme, setTheme] = useState(loadSavedTheme)
 
   const fetchCatalog = useCallback(async (forceRefresh = false) => {
     if (forceRefresh || !getCraftCatalog()) {
@@ -84,6 +101,14 @@ export default function App() {
   useEffect(() => {
     fetchCatalog(false)
   }, [fetchCatalog])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, theme)
+    } catch {
+      /* ignore */
+    }
+  }, [theme])
 
   const category = useMemo(
     () => (catalog ? getCategoryById(form.categoryId, catalog) : null),
@@ -172,9 +197,9 @@ export default function App() {
   }, [form])
 
   return (
-    <div className="min-h-screen bg-mesh">
+    <div className="theme-root min-h-screen bg-mesh" data-theme={theme}>
       <header className="border-b border-white/5 bg-surface/80 backdrop-blur-md sticky top-0 z-10">
-        <div className="mx-auto max-w-6xl px-4 py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="mx-auto max-w-6xl px-4 py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <p className="text-xs uppercase tracking-[0.35em] text-neon/70 font-display">
               Atlantica Online
@@ -183,26 +208,38 @@ export default function App() {
               Craft EXP Calculator
             </h1>
           </div>
-          <p className="text-xs text-zinc-500 max-w-sm sm:text-right">
-            ข้อมูลคราฟจาก{' '}
-            <a
-              href="https://craftcalculator.jana4u.net/"
-              target="_blank"
-              rel="noreferrer"
-              className="text-neon/80 hover:text-neon underline-offset-2 hover:underline"
-            >
-              craftcalculator.jana4u.net
-            </a>
-            {' · '}
-            <a
-              href="https://craftcalculator.jana4u.net/experience-table"
-              target="_blank"
-              rel="noreferrer"
-              className="text-neon/80 hover:text-neon underline-offset-2 hover:underline"
-            >
-              ตาราง EXP
-            </a>
-          </p>
+          <div className="flex flex-col gap-2 sm:items-end">
+            <label className="theme-picker">
+              <span>Theme</span>
+              <select value={theme} onChange={(e) => setTheme(e.target.value)}>
+                {THEMES.map((themeOption) => (
+                  <option key={themeOption.id} value={themeOption.id}>
+                    {themeOption.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="text-xs text-zinc-500 max-w-sm sm:text-right">
+              ข้อมูลคราฟจาก{' '}
+              <a
+                href="https://craftcalculator.jana4u.net/"
+                target="_blank"
+                rel="noreferrer"
+                className="text-neon/80 hover:text-neon underline-offset-2 hover:underline"
+              >
+                craftcalculator.jana4u.net
+              </a>
+              {' · '}
+              <a
+                href="https://craftcalculator.jana4u.net/experience-table"
+                target="_blank"
+                rel="noreferrer"
+                className="text-neon/80 hover:text-neon underline-offset-2 hover:underline"
+              >
+                ตาราง EXP
+              </a>
+            </p>
+          </div>
         </div>
       </header>
 
